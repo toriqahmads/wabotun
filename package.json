@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "csvtojson": "^2.0.10",
+    "js-base64": "^2.5.2",
     "lodash": "^4.17.15",
     "nodemon": "^2.0.3",
     "pg": "^8.1.0",
