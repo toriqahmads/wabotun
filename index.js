@@ -245,14 +245,15 @@ client.on('message', async msg => {
                 
                 if(indexAnswered === -1) {
                     if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase() === message.toLowerCase()) {
-                        user.currentState.point += user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint;
-                        user.currentState.correct += 1;
-
-                        console.log(user.currentState)
+                        let newPoint = Number.parseInt(user.currentState.point) + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
+                        let newCorrect = Number.parseInt(user.currentState.correct) + 1;
+                        user.currentState.point = newPoint;
+                        user.currentState.correct = newCorrect;
                         user.changed('currentState', true);
                         await user.save();
                     } else {
-                        user.currentState.point -= user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint;
+                        let newPoint = Number.parseInt(user.currentState.point) - Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint);
+                        user.currentState.point = newPoint;
                         user.changed('currentState', true);
                         await user.save();
                     }
@@ -266,10 +267,11 @@ client.on('message', async msg => {
                             &&
                             user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase() === message.toLowerCase()
                         ) {
-                            user.currentState.point += user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint;
-                            user.currentState.correct += 1;
-                            user.currentState.point += user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint;
-                            console.log(user.currentState)
+                            let newPoint = Number.parseInt(user.currentState.point )+ Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
+                            newPoint = newPoint + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint);
+                            let newCorrect = Number.parseInt(user.currentState.correct) + 1;
+                            user.currentState.correct = newCorrect;
+                            user.currentState.point = newPoint;
                             user.changed('currentState', true);
                             await user.save();
                         }
@@ -278,14 +280,16 @@ client.on('message', async msg => {
                             && 
                             user.currentState.answered[indexAnswered].answered.toLowerCase() !== message.toLowerCase()
                         ) {
-                            user.currentState.point += user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint;
-                            user.currentState.correct -= 1;
-                            user.currentState.point -= user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint;
-                            console.log(user.currentState)
+                            let newPoint = Number.parseInt(user.currentState.point) - Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
+                            newPoint = newPoint + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint);
+                            let newCorrect = Number.parseInt(user.currentState.correct) + 1;
+                            user.currentState.correct = newCorrect;
+                            user.currentState.point = newPoint;
+                            user.currentState.correct = newCorrect;
                             user.changed('currentState', true);
                             await user.save();
                         }
-                        console.log(user.currentState)
+
                         user.currentState.answered[indexAnswered].answered = message.toLowerCase();
                         user.changed('currentState', true);
                         await user.save();
@@ -414,7 +418,7 @@ client.on('message', async msg => {
                     }]
                 });
 
-                if (quizInfo) {
+                if (quizInfo && msg.hasMedia == false) {
                     if (quizInfo.quizQuestions.length < 1 && (quizInfo.quizName && quizInfo.quizDate && quizInfo.quizTime)) {
                         user.currentState.currentStep = 'buat ujian';
                         user.currentState.nextCommand = `Silahkan mengisi soal sesuai dengan template berikut dan kirimkan kembali dalam format .csv`;
@@ -424,7 +428,7 @@ client.on('message', async msg => {
                         const templateQuiz64 = fs.readFileSync('templateQuiz.csv', 'base64');
                         const templateQuiz = new MessageMedia('text/csv', templateQuiz64, `templateQuiz`);
                         
-                        client.sendMessage(msg.from, user.currentState.nextCommand, { media: templateQuiz });
+                        client.sendMessage(msg.from, templateQuiz);
                     }
                 }
             }
@@ -493,7 +497,7 @@ client.on('message', async msg => {
                 const templateQuiz64 = fs.readFileSync('templateQuiz.csv', 'base64');
                 const templateQuiz = new MessageMedia('text/csv', templateQuiz64, `templateQuiz`);
 
-                client.sendMessage(msg.from, user.currentState.nextCommand, { media: templateQuiz });
+                client.sendMessage(msg.from, templateQuiz);
             } 
 
             else if (msg.hasMedia && user.currentState.currentStep == 'buat ujian') {
