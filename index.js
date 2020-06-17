@@ -65,11 +65,13 @@ client.on('message', async msg => {
         if (!user) user = await Models.User.create({
             id: msg.from,
             currentState: {
+                id: '',
                 currentStep: '',
                 nextCommand: '',
                 currentQuestion: {},
                 currentQuizCode: '',
                 currentTimeUsed: 0,
+                currentStartTime: '',
                 answered: [],
                 correct: 0,
                 point: 0,
@@ -77,37 +79,39 @@ client.on('message', async msg => {
             }
         });
 
-        if (user.currentState.currentQuizCode !== '') {
+        if (user.currentState.currentQuizCode != '') {
             const indexState = _.findIndex(user.userState, { quizCode: user.currentState.currentQuizCode });
-            if (indexState > -1) user.userState = user.userState[indexState];
+            if (indexState > -1) {
+                user.userState = user.userState[indexState];
+            }
         }
 
-        if (message.toLowerCase() == 'ping') {
+        if (message.toLowerCase().trim() == 'ping') {
             msg.reply('pong');
         }
 
-        else if (message.toLowerCase() == 'help') {
-            msg.reply(`daftar : untuk mendaftar dan melengkapi data diri\n
-                mulai ujian : untuk memulai ujian\n
-                buat ujian : untuk membuat ujian baru\n
-                a|b|c|d|e : untuk menjawab soal\n
-                no [no soal] : untuk loncat ke soal no [no soal]\n
-                selanjutnya : untuk loncat ke soal no selanjutnya\n
-                sebelumnya : untuk loncat ke soal no sebelumnya`)
+        else if (message.toLowerCase().trim() == 'help') {
+            client.sendMessage(msg.from, `*daftar* : untuk mendaftar dan melengkapi data diri
+*mulai ujian* : untuk memulai ujian
+*buat ujian* : untuk membuat ujian baru
+*a|b|c|d|e* : untuk menjawab soal
+*no [no soal]* : untuk loncat ke soal no [no soal]
+*selanjutnya* : untuk loncat ke soal no selanjutnya
+*sebelumnya* : untuk loncat ke soal no sebelumnya`)
         }
 
-        else if ((message.toLowerCase() == 'daftar' 
+        else if ((message.toLowerCase().trim() == 'daftar' 
             ||
             message.match(/^[a-zA-Z\s]{1,25}$/i)
             ||
             message.match(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/i)
            ) 
         && 
-            (user.firstName === null || user.lastName === null || user.email === null)
+            (user.firstName == null || user.lastName == null || user.email == null)
         && 
-            (message.toLowerCase() != 'buat ujian' && message.toLowerCase() != 'sebelumnya' && message.toLowerCase() != 'selanjutnya' && message.toLowerCase() != 'help')
+            (message.toLowerCase().trim() != 'buat ujian' && message.toLowerCase().trim() != 'sebelumnya' && message.toLowerCase().trim() != 'selanjutnya' && message.toLowerCase().trim() != 'help')
         ) {
-            if (user.firstName === null && message.toLowerCase() == 'daftar') {
+            if (user.firstName == null && message.toLowerCase().trim() == 'daftar') {
                 user.currentState.currentStep = 'daftar';
                 user.currentState.nextCommand = 'Masukkan nama depan Anda (Maksimal 25 karakter termasuk spasi)';
                 user.changed('currentState', true);
@@ -115,7 +119,7 @@ client.on('message', async msg => {
 
                 msg.reply(user.currentState.nextCommand);
             }
-            else if (user.firstName === null && message.match(/^[a-zA-Z\s]{1,25}$/i) && user.currentState.currentStep == 'daftar') {
+            else if (user.firstName == null && message.match(/^[a-zA-Z\s]{1,25}$/i) && user.currentState.currentStep == 'daftar') {
                 user.currentState.currentStep = 'daftar';
                 user.currentState.nextCommand = 'Masukkan nama belakang Anda (Maksimal 25 karakter termasuk spasi)';
                 user.firstName = message;
@@ -124,7 +128,7 @@ client.on('message', async msg => {
 
                 msg.reply(user.currentState.nextCommand);
             }
-            else if (user.lastName === null && message.match(/^[a-zA-Z\s]{1,25}$/i) && user.currentState.currentStep == 'daftar') {
+            else if (user.lastName == null && message.match(/^[a-zA-Z\s]{1,25}$/i) && user.currentState.currentStep == 'daftar') {
                 user.currentState.currentStep = 'daftar';
                 user.currentState.nextCommand = 'Masukkan email Anda';
                 user.lastName = message;
@@ -133,7 +137,7 @@ client.on('message', async msg => {
 
                 msg.reply(user.currentState.nextCommand);
             }
-            else if (user.email === null 
+            else if (user.email == null 
                 &&
                 message.match(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/i)
                 &&
@@ -157,7 +161,7 @@ client.on('message', async msg => {
             }
         }
 
-        else if ((message.toLowerCase() == 'mulai ujian' 
+        else if ((message.toLowerCase().trim() == 'mulai ujian' 
                 || message.match(/^[a-zA-Z]{7,7}$/g))
             && (user.firstName && user.lastName && user.email)
         ) {
@@ -182,33 +186,40 @@ client.on('message', async msg => {
 
                     if (haveQuizState) {
                         user.currentState = haveQuizState.currentState;
+                        user.currentState.id = haveQuizState.id;
                         user.currentState.currentStep = 'mulai ujian';
                         user.currentState.currentQuizCode = message;
                         user.currentState.currentQuiz = quiz.quizQuestions;
                         user.changed('currentState', true);
                         await user.save();
-                        await Models.State.update({
-                            currentState: user.currentState
-                        }, {
-                            where: {
-                                whatsapp: msg.from,
-                                quizCode: message
-                            }
+                        await updateState({
+                            currentState: user.currentState,
+                            from: msg.from,
+                            quizCode: user.currentState.currentQuizCode
                         });
                     } 
                     else {
+                        let quizs = quizParser({
+                            question: quiz.quizQuestions[0].question,
+                            options: quiz.quizQuestions[0].options
+                        });
+
                         user.currentState.currentQuizCode = message;
                         user.currentState.currentStep = 'mulai ujian';
-                        user.currentState.nextCommand = quiz.quizQuestions[0].question;
+                        user.currentState.nextCommand = quizs;
                         user.currentState.currentQuiz = quiz.quizQuestions;
                         user.currentState.currentQuestion = { questionId: quiz.quizQuestions[0].id, index: 0 };
                         user.changed('currentState', true);
                         await user.save();
-                        await Models.State.create({
+                        const state = await Models.State.create({
                             whatsapp: msg.from,
                             quizCode: message,
                             currentState: user.currentState
                         });
+
+                        user.currentState.id = state.id;
+                        user.changed('currentState', true);
+                        await user.save();
                     }
 
                     client.sendMessage(msg.from, user.currentState.nextCommand);
@@ -232,7 +243,7 @@ client.on('message', async msg => {
             &&
             user.userState
             &&
-            message.toLowerCase().match(/^[a|b|c|d|e]{1,1}$/))
+            message.toLowerCase().trim().match(/^[a|b|c|d|e]{1,1}$/))
             && (user.firstName && user.lastName && user.email)
         ) {
             if(user.currentState.currentQuiz.length < 1) {
@@ -243,8 +254,8 @@ client.on('message', async msg => {
             } else {
                 const indexAnswered = _.findIndex(user.currentState.answered, { questionId: user.currentState.currentQuestion.questionId });
                 
-                if(indexAnswered === -1) {
-                    if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase() === message.toLowerCase()) {
+                if(indexAnswered == -1) {
+                    if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase().trim() == message.toLowerCase().trim()) {
                         let newPoint = Number.parseInt(user.currentState.point) + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
                         let newCorrect = Number.parseInt(user.currentState.correct) + 1;
                         user.currentState.point = newPoint;
@@ -258,17 +269,17 @@ client.on('message', async msg => {
                         await user.save();
                     }
                     
-                    user.currentState.answered.push({ answered: message.toLowerCase(), questionId: user.currentState.currentQuestion.questionId }); 
+                    user.currentState.answered.push({ answered: message.toLowerCase().trim(), questionId: user.currentState.currentQuestion.questionId }); 
                     user.changed('currentState', true);
                     await user.save();
                 } else {
-                    if (user.currentState.answered[indexAnswered].answered.toLowerCase() !== message.toLowerCase()) {
-                        if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase() !== user.currentState.answered[indexAnswered].answered.toLowerCase()
+                    if (user.currentState.answered[indexAnswered].answered.toLowerCase().trim() != message.toLowerCase().trim()) {
+                        if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase().trim() != user.currentState.answered[indexAnswered].answered.toLowerCase().trim()
                             &&
-                            user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase() === message.toLowerCase()
+                            user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase().trim() == message.toLowerCase().trim()
                         ) {
-                            let newPoint = Number.parseInt(user.currentState.point )+ Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
-                            newPoint = newPoint + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint);
+                            let newPoint = Number.parseInt(user.currentState.point) + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
+                            newPoint = newPoint + (-1 * Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint));
                             let newCorrect = Number.parseInt(user.currentState.correct) + 1;
                             user.currentState.correct = newCorrect;
                             user.currentState.point = newPoint;
@@ -276,21 +287,20 @@ client.on('message', async msg => {
                             await user.save();
                         }
 
-                        if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase() === user.currentState.answered[indexAnswered].answered.toLowerCase()
+                        if (user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctAnswer.toLowerCase().trim() == user.currentState.answered[indexAnswered].answered.toLowerCase().trim()
                             && 
-                            user.currentState.answered[indexAnswered].answered.toLowerCase() !== message.toLowerCase()
+                            user.currentState.answered[indexAnswered].answered.toLowerCase().trim() != message.toLowerCase().trim()
                         ) {
                             let newPoint = Number.parseInt(user.currentState.point) - Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].correctPoint);
                             newPoint = newPoint + Number.parseInt(user.currentState.currentQuiz[user.currentState.currentQuestion.index].wrongPoint);
-                            let newCorrect = Number.parseInt(user.currentState.correct) + 1;
+                            let newCorrect = Number.parseInt(user.currentState.correct) - 1;
                             user.currentState.correct = newCorrect;
                             user.currentState.point = newPoint;
-                            user.currentState.correct = newCorrect;
                             user.changed('currentState', true);
                             await user.save();
                         }
 
-                        user.currentState.answered[indexAnswered].answered = message.toLowerCase();
+                        user.currentState.answered[indexAnswered].answered = message.toLowerCase().trim();
                         user.changed('currentState', true);
                         await user.save();
                     }
@@ -298,108 +308,142 @@ client.on('message', async msg => {
 
                 let idx = user.currentState.currentQuestion.index + 1;
 
-                if ((idx) === (user.currentState.currentQuiz.length)) {
+                if ((idx) == (user.currentState.currentQuiz.length)) {
+                    await updateState({
+                        currentState: user.currentState,
+                        result: {
+                            correct: user.currentState.correct,
+                            point: user.currentState.point
+                        },
+                        from: msg.from,
+                        quizCode: user.currentState.currentQuizCode
+                    });
+
                     client.sendMessage(
                         msg.from, 
                         `Anda telah menjawab semua soal, jika ingin mengoreksi jawaban silahkan ketik \`no [NOSOAL]\``
                     );
                 } else {
-                    user.currentState.nextCommand = user.currentState.currentQuiz[idx].question;
+                    let quiz = quizParser({
+                        question: user.currentState.currentQuiz[idx].question,
+                        options: user.currentState.currentQuiz[idx].options
+                    });
+
+                    user.currentState.nextCommand = quiz;
                     user.currentState.currentQuestion.questionId = user.currentState.currentQuiz[idx].id;
                     user.currentState.currentQuestion.index = idx;
                     user.changed('currentState', true);
                     await user.save();
-                    await Models.State.update({
-                        currentState: user.currentState
-                    }, {
-                        where: {
-                            whatsapp: msg.from,
-                            quizCode: user.currentState.currentQuizCode
-                        }
-                    }); 
+                    await updateState({
+                        currentState: user.currentState,
+                        result: {
+                            correct: user.currentState.correct,
+                            point: user.currentState.point
+                        },
+                        from: msg.from,
+                        quizCode: user.currentState.currentQuizCode
+                    });
+
                     client.sendMessage(msg.from, user.currentState.nextCommand);
                 }
             }
         }
 
-        else if ((message.toLowerCase().match(/^no\s+\d+$/i) && user.currentState.currentStep == 'mulai ujian')
+        else if ((message.toLowerCase().trim().match(/^no\s+\d+$/i) && user.currentState.currentStep == 'mulai ujian')
             && (user.firstName && user.lastName && user.email)
         ) {
             const no = Number.parseInt(message.split(' ')[1]) - 1;
-            if (typeof(user.currentState.currentQuiz[no]) === 'undefined') {
+            if (typeof(user.currentState.currentQuiz[no]) == 'undefined') {
                 client.sendMessage(
                     msg.from, 
                     `Nomor soal yang Anda masukkan tidak tersedia. No soal terakhir adalah ${user.currentState.currentQuiz.length}`
                 );
             }
             else {
+                let quiz = quizParser({
+                    question: user.currentState.currentQuiz[no].question,
+                    options: user.currentState.currentQuiz[no].options
+                });
+
                 user.currentState.currentQuestion.questionId = user.currentState.currentQuiz[no].id;
                 user.currentState.currentQuestion.index = no;
-                user.currentState.nextCommand = user.currentState.currentQuiz[no].question;
+                user.currentState.nextCommand = quiz;
                 user.changed('currentState', true);
                 await user.save();
-                await Models.State.update({
-                    currentState: user.currentState
-                }, {
-                    where: {
-                        whatsapp: msg.from,
-                        quizCode: user.currentState.currentQuizCode
-                    }
+                await updateState({
+                    currentState: user.currentState,
+                    result: {
+                        correct: user.currentState.correct,
+                        point: user.currentState.point
+                    },
+                    from: msg.from,
+                    quizCode: user.currentState.currentQuizCode
                 });
 
                 client.sendMessage(msg.from, user.currentState.nextCommand);
             }
         }
 
-        else if ((message.toLowerCase() === 'selanjutnya' && user.currentState.currentStep == 'mulai ujian')
+        else if ((message.toLowerCase().trim() == 'selanjutnya' && user.currentState.currentStep == 'mulai ujian')
             && (user.firstName && user.lastName && user.email)
         ) {
             if ((user.currentState.currentQuestion.index + 1) > user.currentState.currentQuiz.length) {
                 client.sendMessage(msg.from, `Anda sedang mengerjakan soal terakhir`);
             } else {
-                user.currentState.nextCommand = user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].question;
+                let quiz = quizParser({
+                    question: user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].question,
+                    options: user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].options
+                });
+                user.currentState.nextCommand = quiz;
                 user.currentState.currentQuestion.questionId = user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].id;
                 user.currentState.currentQuestion.index = user.currentState.currentQuestion.index + 1;
                 user.changed('currentState', true);
                 await user.save();
-                await Models.State.update({
-                    currentState: user.currentState
-                }, {
-                    where: {
-                        whatsapp: msg.from,
-                        quizCode: user.currentState.currentQuizCode
-                    }
+                await updateState({
+                    currentState: user.currentState,
+                    result: {
+                        correct: user.currentState.correct,
+                        point: user.currentState.point
+                    },
+                    from: msg.from,
+                    quizCode: user.currentState.currentQuizCode
                 });
 
                 client.sendMessage(msg.from, user.currentState.nextCommand);
             }
         }
 
-        else if ((message.toLowerCase() === 'sebelumnya' && user.currentState.currentStep == 'mulai ujian')
+        else if ((message.toLowerCase().trim() == 'sebelumnya' && user.currentState.currentStep == 'mulai ujian')
             && (user.firstName && user.lastName && user.email)
         ) {
             if ((user.currentState.currentQuestion.index - 1) < 0) {
                 client.sendMessage(msg.from, `Anda sedang mengerjakan soal no pertama`);
             } else {
-                user.currentState.nextCommand = user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].question;
+                let quiz = quizParser({
+                    question: user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].question,
+                    options: user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].options
+                });
+
+                user.currentState.nextCommand = quiz;
                 user.currentState.currentQuestion.questionId = user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].id;
                 user.currentState.currentQuestion.index = user.currentState.currentQuestion.index - 1;
                 user.changed('currentState', true);
                 await user.save();
-                await Models.State.update({
-                    currentState: user.currentState
-                }, {
-                    where: {
-                        whatsapp: msg.from,
-                        quizCode: user.currentState.currentQuizCode
-                    }
+                await updateState({
+                    currentState: user.currentState,
+                    result: {
+                        correct: user.currentState.correct,
+                        point: user.currentState.point
+                    },
+                    from: msg.from,
+                    quizCode: user.currentState.currentQuizCode
                 });
                  
                 client.sendMessage(msg.from, user.currentState.nextCommand);
             }
         }
 
-        else if ((message.toLowerCase() == 'buat ujian'
+        else if ((message.toLowerCase().trim() == 'buat ujian'
                 || message.match(/^([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))$/)
                 || message.match(/^[\w\s]{10,50}$/)
                 || message.match(/^[0-9]+$/)
@@ -407,7 +451,7 @@ client.on('message', async msg => {
             && (user.firstName && user.lastName && user.email)
         ) {
             let quizInfo
-            if (user.currentState.currentQuizCreate !== null) {
+            if (user.currentState.currentQuizCreate != null) {
                 quizInfo = await Models.QuizInfo.findOne({
                     where: {
                         id: user.currentState.currentQuizCreate
@@ -433,7 +477,7 @@ client.on('message', async msg => {
                 }
             }
             
-            if (message.toLowerCase() == 'buat ujian' && !quizInfo) {
+            if (message.toLowerCase().trim() == 'buat ujian' && !quizInfo) {
                 if (user.currentState.currentQuizCreate == '') {
                     quizInfo = await Models.QuizInfo.create({
                         whatsapp: msg.from
@@ -449,9 +493,9 @@ client.on('message', async msg => {
                 msg.reply(user.currentState.nextCommand);
             }
 
-            else if (quizInfo.quizName === null && message.toLowerCase() != 'buat ujian' && user.currentState.currentStep == 'buat ujian' && message.match(/^[\w\s]{10,50}$/)) {
+            else if (quizInfo.quizName == null && message.toLowerCase().trim() != 'buat ujian' && user.currentState.currentStep == 'buat ujian' && message.match(/^[\w\s]{10,50}$/)) {
                 user.currentState.currentStep = 'buat ujian';
-                user.currentState.nextCommand = `Masukkan tanggal ujian (YYYY-MM-YY)`;
+                user.currentState.nextCommand = `Masukkan tanggal ujian (YYYY-MM-DD)`;
                 user.changed('currentState', true);
                 await user.save();
                 await Models.QuizInfo.update({
@@ -465,7 +509,7 @@ client.on('message', async msg => {
                 msg.reply(user.currentState.nextCommand);
             }
 
-            else if (quizInfo.quizDate === null && message.match(/^([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))$/) && user.currentState.currentStep == 'buat ujian') {
+            else if (quizInfo.quizDate == null && message.match(/^([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))$/) && user.currentState.currentStep == 'buat ujian') {
                 user.currentState.currentStep = 'buat ujian';
                 user.currentState.nextCommand = `Masukkan waktu ujian (Dalam menit)`;
                 user.changed('currentState', true);
@@ -481,7 +525,7 @@ client.on('message', async msg => {
                 msg.reply(user.currentState.nextCommand);
             } 
 
-            else if (quizInfo.quizTime === null && message.match(/^[0-9]+$/) && user.currentState.currentStep == 'buat ujian') {
+            else if (quizInfo.quizTime == null && message.match(/^[0-9]+$/) && user.currentState.currentStep == 'buat ujian' && msg.hasMedia == false) {
                 user.currentState.currentStep = 'buat ujian';
                 user.currentState.nextCommand = `Silahkan mengisi soal sesuai dengan template berikut dan kirimkan kembali dalam format .csv`;
                 user.changed('currentState', true);
@@ -497,7 +541,10 @@ client.on('message', async msg => {
                 const templateQuiz64 = fs.readFileSync('templateQuiz.csv', 'base64');
                 const templateQuiz = new MessageMedia('text/csv', templateQuiz64, `templateQuiz`);
 
-                client.sendMessage(msg.from, templateQuiz);
+                msg.reply(user.currentState.nextCommand);
+                setTimeout(function(){ 
+                    client.sendMessage(msg.from, templateQuiz); 
+                }, 1000);
             } 
 
             else if (msg.hasMedia && user.currentState.currentStep == 'buat ujian') {
@@ -615,6 +662,38 @@ client.on('disconnected', (reason) => {
 
 client.initialize();
 
-let quizParser = async (data) => {
+let quizParser = (data) => {
+    let message = `${data.question}\n`;
+    _.forEach(data.options, (val, key) => {
+        message += `\n${key.toUpperCase().trim()}. ${val.trim()}`
+    });
 
+    return message;
+}
+
+let updateState = async (data) => {
+    try {
+        let state = await Models.State.findOne({
+            where: {
+                whatsapp: data.from,
+                quizCode: data.quizCode
+            }
+        });
+
+        if (data.currentState) {
+            state.currentState = data.currentState;
+            state.changed('currentState', true);
+        }
+        if (data.result) {
+            state.result = data.result;
+            state.changed('result', true);
+        }
+
+        await state.save();
+
+        return Promise.resolve()
+    }
+    catch(err) {
+        return Promise.reject(err);
+    }
 }
