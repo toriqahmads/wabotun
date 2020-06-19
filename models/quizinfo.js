@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       defaultValue: function() {
       	let result = '';
-	    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+	    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 	    for (let i = 0; i < 7; i++) {
 	      result += characters.charAt(Math.floor(Math.random() * 6));
 	    }

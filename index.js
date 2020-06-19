@@ -91,13 +91,27 @@ client.on('message', async msg => {
         }
 
         else if (message.toLowerCase().trim() == 'help') {
-            client.sendMessage(msg.from, `*daftar* : untuk mendaftar dan melengkapi data diri
-*mulai ujian* : untuk memulai ujian
-*buat ujian* : untuk membuat ujian baru
-*a|b|c|d|e* : untuk menjawab soal
-*no [no soal]* : untuk loncat ke soal no [no soal]
-*selanjutnya* : untuk loncat ke soal no selanjutnya
-*sebelumnya* : untuk loncat ke soal no sebelumnya`)
+            let help = '*daftar* : untuk mendaftar dan melengkapi data diri\n'
+            help += '*mulai ujian* : untuk memulai ujian\n'
+            help += '*buat ujian* : untuk membuat ujian baru\n'
+            help += '*a|b|c|d|e* : untuk menjawab soal\n'
+            help += '*no [no soal]* : untuk loncat ke soal no [no soal]\n'
+            help += '*selanjutnya* : untuk loncat ke soal no selanjutnya\n'
+            help += '*sebelumnya* : untuk loncat ke soal no sebelumnya\n'
+            help += '*cekhasil [kode ujian]* : untuk cek hasil ujian'
+            client.sendMessage(msg.from, help);
+        }
+
+        else if ((
+            message.toLowerCase().trim().match(/(cekhasil)\s+([a-zA-Z]{7,7}$)/))
+            && (user.firstName && user.lastName && user.email)
+        ) {
+            const result = await checkHasil({
+                from: msg.from,
+                quizCode: message.toLowerCase().trim().split(/cekhasil\s+/)[1]
+            });
+
+            msg.reply(result);
         }
 
         else if ((message.toLowerCase().trim() == 'daftar' 
@@ -691,7 +705,35 @@ let updateState = async (data) => {
 
         await state.save();
 
-        return Promise.resolve()
+        return Promise.resolve();
+    }
+    catch(err) {
+        return Promise.reject(err);
+    }
+}
+
+let checkHasil = async (data) => {
+    try {
+        console.log(data)
+        let state = await Models.State.findOne({
+            where: {
+                whatsapp: data.from,
+                quizCode: data.quizCode.toUpperCase()
+            },
+            attributes: ['whatsapp', 'quizCode', 'result']
+        });
+
+        console.log(state)
+
+        if (!state) return Promise.resolve(`Kode ujian yang Anda masukkan salah atau Anda tidak mengikuti ujian tersebut`);
+
+        if (!state.result) return Promise.resolve(`Anda tidak mengerjakan ujian tersebut`);
+
+        let message = 'Hasil ujian Anda:\n'
+        message += `Jumlah jawaban benar = ${state.result.correct}\n`
+        message += `Nilai Akhir = ${state.result.point}`
+
+        return Promise.resolve(message);
     }
     catch(err) {
         return Promise.reject(err);
