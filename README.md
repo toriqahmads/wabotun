@@ -16,7 +16,7 @@ Wabotun use whatsapp-web.js library for whatsapp api
 
 to run this application follow this step :
 1. Install sequelize and sequelize-cli as global installation ```npm install sequelize sequelize-cli -g```
-2. setup your postgres credential in config/database.json
+2. setup your postgres credential in config/config.json
 3. run this command below
 
 ```sh
