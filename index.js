@@ -123,7 +123,12 @@ client.on('message', async msg => {
         && 
             (user.firstName == null || user.lastName == null || user.email == null)
         && 
-            (message.toLowerCase().trim() != 'buat ujian' && message.toLowerCase().trim() != 'sebelumnya' && message.toLowerCase().trim() != 'selanjutnya' && message.toLowerCase().trim() != 'help')
+            (message.toLowerCase().trim() != 'buat ujian' 
+                && message.toLowerCase().trim() != 'sebelumnya' 
+                && message.toLowerCase().trim() != 'selanjutnya' 
+                && message.toLowerCase().trim() != 'help' 
+                && message.toLowerCase().trim() != 'mulai ujian' 
+                && message.toLowerCase().trim() != 'cekhasil')
         ) {
             if (user.firstName == null && message.toLowerCase().trim() == 'daftar') {
                 user.currentState.currentStep = 'daftar';
@@ -214,6 +219,9 @@ client.on('message', async msg => {
                     } 
                     else {
                         let quizs = quizParser({
+                            index: 0,
+                            correctPoint: quiz.quizQuestions[0].correctPoint,
+                            wrongPoint: quiz.quizQuestions[0].wrongPoint,
                             question: quiz.quizQuestions[0].question,
                             options: quiz.quizQuestions[0].options
                         });
@@ -339,6 +347,9 @@ client.on('message', async msg => {
                     );
                 } else {
                     let quiz = quizParser({
+                        index: idx,
+                        correctPoint: user.currentState.currentQuiz[idx].correctPoint,
+                        wrongPoint: user.currentState.currentQuiz[idx].wrongPoint,
                         question: user.currentState.currentQuiz[idx].question,
                         options: user.currentState.currentQuiz[idx].options
                     });
@@ -375,6 +386,9 @@ client.on('message', async msg => {
             }
             else {
                 let quiz = quizParser({
+                    index: no,
+                    correctPoint: user.currentState.currentQuiz[no].correctPoint,
+                    wrongPoint: user.currentState.currentQuiz[no].wrongPoint,
                     question: user.currentState.currentQuiz[no].question,
                     options: user.currentState.currentQuiz[no].options
                 });
@@ -405,6 +419,9 @@ client.on('message', async msg => {
                 client.sendMessage(msg.from, `Anda sedang mengerjakan soal terakhir`);
             } else {
                 let quiz = quizParser({
+                    index: user.currentState.currentQuestion.index + 1,
+                    correctPoint: user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].correctPoint,
+                    wrongPoint: user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].wrongPoint,
                     question: user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].question,
                     options: user.currentState.currentQuiz[user.currentState.currentQuestion.index + 1].options
                 });
@@ -434,6 +451,9 @@ client.on('message', async msg => {
                 client.sendMessage(msg.from, `Anda sedang mengerjakan soal no pertama`);
             } else {
                 let quiz = quizParser({
+                    index: user.currentState.currentQuestion.index - 1,
+                    correctPoint: user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].correctPoint,
+                    wrongPoint: user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].wrongPoint,
                     question: user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].question,
                     options: user.currentState.currentQuiz[user.currentState.currentQuestion.index - 1].options
                 });
@@ -596,7 +616,7 @@ client.on('message', async msg => {
             }
         }
         else {
-            client.sendMessage(msg.from, `Anda harus melengkapi data diri terlebih dahulu.\nSilahkan ketik datar untuk melengkapi data diri`);
+            msg.reply(`Anda harus melengkapi data diri terlebih dahulu.\nSilahkan ketik datar untuk melengkapi data diri`);
         }
     } catch (err) {
         console.log(err)
@@ -677,10 +697,14 @@ client.on('disconnected', (reason) => {
 client.initialize();
 
 let quizParser = (data) => {
-    let message = `${data.question}\n`;
+    console.log(data)
+    let message = `${data.index + 1}. ${data.question}\n`;
     _.forEach(data.options, (val, key) => {
         message += `\n${key.toUpperCase().trim()}. ${val.trim()}`
     });
+
+    message += `\n\nNilai benar = ${data.correctPoint}`
+    message += `\nNilai salah = ${data.wrongPoint}`
 
     return message;
 }
